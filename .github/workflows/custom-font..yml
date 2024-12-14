@@ -1,8 +1,7 @@
-name: Manually Trigger Font Patching
+name: Patch Nerd Fonts
 
 on:
   workflow_dispatch:
-    # 手动触发工作流
     inputs:
       reason:
         description: 'Reason for font patching'
@@ -13,32 +12,22 @@ jobs:
   patch-fonts:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      
-      - name: Setup Python
-        uses: actions/setup-python@v3
-        with:
-          python-version: '3.x'
-      
-      - name: Install Dependencies
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Create output directory
+        run: mkdir -p ${{ github.workspace }}/myFontsOut
+
+      - name: Patch Fonts with Nerd Fonts Docker
         run: |
-          sudo apt-get update
-          sudo apt-get install -y fontforge python3-pip
-          pip install python-fontforge argparse
-      
-      - name: Patch Fonts
-        run: |
-          mkdir -p patched_fonts
-          
-          # 处理 myFonts 目录下的所有 .ttf 字体
-          for font in myFonts/*.otf; do
-            fontforge -script font-patcher "$font" --mdi -out patched_fonts
-          done
-      
+          docker run --rm \
+            -v ${{ github.workspace }}/myFonts:/in:Z \
+            -v ${{ github.workspace }}/myFontsOut:/out:Z \
+            nerdfonts/patcher --mdi
+
       - name: Upload Artifacts
         uses: actions/upload-artifact@v3
         with:
           name: nerd-fonts
-          path: patched_fonts/
-          # 保留 90 天
+          path: ${{ github.workspace }}/myFontsOut/
           retention-days: 90
